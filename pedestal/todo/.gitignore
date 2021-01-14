@@ -1,6 +1,4 @@
-#IDE
-.idea
-*.iml
+# Project related
 
 # Java related
 pom.xml
@@ -33,18 +31,8 @@ repl-port
 # Logging
 *.log
 /logs/
-logs/
 
 # Builds
 out/
 build/
 
-
-#vscode extension
-.history
-.calva
-.clj-kondo
-.lsp
-
-#ignora libs do consumer de dev
-dev-resource/node_modules

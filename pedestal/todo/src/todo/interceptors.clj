@@ -1,5 +1,7 @@
 (ns todo.interceptors
-  (:require [io.pedestal.http.route :as route]))
+  (:require [io.pedestal.http.route :as route]
+            [route-swagger.doc :as sw.doc]
+            [schema.core :as s]))
 
 (defn response [status body & {:as headers}]
   {:status status :body body :headers headers})
@@ -39,38 +41,51 @@
   {:name  item-name
    :done? false})
 
-(def list-create
-  {:name :list-create
-   :enter
-         (fn [context]
-           (let [list-name (get-in context [:request :query-params :name] "Unnamed List")
-                 new-list  (make-list list-name)
-                 db-id     (str (gensym "l"))
-                 url       (route/url-for :list-view :params {:list-id db-id})
-                 ;url       "(route/url-for :list-view :params {:list-id db-id})"
-                 ]
-             (assoc context
-               :response (created new-list "Location" url)
-               :tx-data [assoc db-id new-list])))})
+(def create-list
+  (sw.doc/annotate
+    {:summary    "create-list"
+     :parameters {:query-params {(s/required-key :name) s/Str}}
+     :responses  {201 {:body {(s/required-key :message) s/Str}}}}
+    (io.pedestal.interceptor/interceptor
+      {:name :list-create
+       :enter
+             (fn [context]
+               (let [list-name (get-in context [:request :query-params :name] "Unnamed List")
+                     new-list  (make-list list-name)
+                     db-id     (str (gensym "l"))
+                     url       (route/url-for :get-list :params {:list-id db-id})]
+                 (assoc context
+                   :response (created new-list "Location" url)
+                   :tx-data [assoc db-id new-list])))})))
 
-(def all-lists-view
-  {:name  :get-lists
-   :enter (fn [context]
-            (if-let [all-lists (get-in context [:request :database])]
-              (if (empty? all-lists)
-                (assoc context :response (ok "Empty todo-list!\n"))
-                (assoc context :response (ok all-lists)))
-              context))})
+(def get-all-lists
+  (sw.doc/annotate
+    {:summary    "get-all-lists"
+     :parameters {:query-params {(s/required-key :name) s/Str}}
+     :responses  {200 {:body {(s/required-key :message) s/Str}}}}
+    (io.pedestal.interceptor/interceptor
+      {:name  :get-lists
+       :enter (fn [context]
+                (if-let [all-lists (get-in context [:request :database])]
+                  (if (empty? all-lists)
+                    (assoc context :response (ok "Empty todo-list!\n"))
+                    (assoc context :response (ok all-lists)))
+                  context))})))
 
-(def list-view
-  {:name :list-view
-   :enter
-         (fn [context]
-           (let [db-id (get-in context [:request :path-params :list-id])
-                 database (get-in context [:request :database])]
-             (if-let [the-list (get database db-id)]
-               (assoc context :response (ok the-list))
-               context)))})
+(def get-list
+  (sw.doc/annotate
+    {:summary    "get-lists"
+     :parameters {:path-params {(s/required-key :list-id) s/Str}}
+     :responses  {200 {:body {(s/required-key :message) s/Str}}}}
+    (io.pedestal.interceptor/interceptor
+      {:name :get-list
+       :enter
+             (fn [context]
+               (let [db-id    (get-in context [:request :path-params :list-id])
+                     database (get-in context [:request :database])]
+                 (if-let [the-list (get database db-id)]
+                   (assoc context :response (ok the-list))
+                   context)))})))
 
 (def entity-render
   {:name :entity-render
@@ -101,15 +116,21 @@
     (assoc-in dbval [list-id :items item-id] new-item)
     dbval))
 
-(def list-item-create
-  {:name :list-item-create
-   :enter
-         (fn [context]
-           (if-let [list-id (get-in context [:request :path-params :list-id])]
-             (let [item-name (get-in context [:request :query-params :name] "Unnamed Item")
-                   new-item  (make-list-item item-name)
-                   item-id   (str (gensym "i"))]
-               (-> context
-                 (assoc :tx-data [list-item-add list-id item-id new-item])
-                 (assoc-in [:request :path-params :item-id] item-id)))
-             context))})
+(def create-list-item
+  (sw.doc/annotate
+    {:summary    "create-list-item"
+     :parameters {:path-params {(s/required-key :list-id) s/Str}
+                  :query-params {(s/required-key :name) s/Str}}
+     :responses  {201 {:body {(s/required-key :message) s/Str}}}}
+    (io.pedestal.interceptor/interceptor
+      {:name :list-item-create
+       :enter
+             (fn [context]
+               (if-let [list-id (get-in context [:request :path-params :list-id])]
+                 (let [item-name (get-in context [:request :query-params :name] "Unnamed Item")
+                       new-item  (make-list-item item-name)
+                       item-id   (str (gensym "i"))]
+                   (-> context
+                     (assoc :tx-data [list-item-add list-id item-id new-item])
+                     (assoc-in [:request :path-params :item-id] item-id)))
+                 context))})))

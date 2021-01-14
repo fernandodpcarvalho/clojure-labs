@@ -1,5 +1,7 @@
 (ns todo.interceptors
-  (:require [io.pedestal.http.route :as route]))
+  (:require [io.pedestal.http.route :as route]
+            [route-swagger.doc :as sw.doc]
+            [schema.core :as s]))
 
 (defn response [status body & {:as headers}]
   {:status status :body body :headers headers})
@@ -40,18 +42,21 @@
    :done? false})
 
 (def list-create
-  {:name :list-create
-   :enter
-         (fn [context]
-           (let [list-name (get-in context [:request :query-params :name] "Unnamed List")
-                 new-list  (make-list list-name)
-                 db-id     (str (gensym "l"))
-                 url       (route/url-for :list-view :params {:list-id db-id})
-                 ;url       "(route/url-for :list-view :params {:list-id db-id})"
-                 ]
-             (assoc context
-               :response (created new-list "Location" url)
-               :tx-data [assoc db-id new-list])))})
+  (sw.doc/annotate
+    {:summary    "list-create"
+     :parameters {:query-params {(s/required-key :name) s/Str}}
+     :responses  {200 {:body {(s/required-key :message) s/Str}}}}
+    (io.pedestal.interceptor/interceptor
+     {:name :list-create
+     :enter
+           (fn [context]
+             (let [list-name (get-in context [:request :query-params :name] "Unnamed List")
+                   new-list  (make-list list-name)
+                   db-id     (str (gensym "l"))
+                   url       (route/url-for :list-view :params {:list-id db-id})]
+               (assoc context
+                 :response (created new-list "Location" url)
+                 :tx-data [assoc db-id new-list])))})))
 
 (def all-lists-view
   {:name  :get-lists
@@ -66,7 +71,7 @@
   {:name :list-view
    :enter
          (fn [context]
-           (let [db-id (get-in context [:request :path-params :list-id])
+           (let [db-id    (get-in context [:request :path-params :list-id])
                  database (get-in context [:request :database])]
              (if-let [the-list (get database db-id)]
                (assoc context :response (ok the-list))

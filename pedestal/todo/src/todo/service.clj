@@ -25,18 +25,20 @@
     ["/todo/:list-id/:item-id" :put echo :route-name :list-item-update]
     ["/todo/:list-id/:item-id" :delete echo :route-name :list-item-delete]
     ["/swagger.json" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) api/swagger-json]]
-    ;["/*resource" :get [no-csp api/swagger-ui]]
-    })
+    ["/*resource" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) no-csp api/swagger-ui]]})
 
 (s/with-fn-validation
   (api/defroutes routes swagger-doc routes))
 
 (def service
   {:env                     :prod
-   ::http/routes            routes
+   ::http/routes            #(deref #'routes)
    ::http/resource-path     "/public"
    ::http/type              :jetty
+   ::http/router            :linear-search
    ::http/port              8080
+   ::http/allowed-origins   (constantly true)
+   ::http/join?             false
    ::http/container-options {:h2c? true
                              :h2?  false
                              :ssl? false}})

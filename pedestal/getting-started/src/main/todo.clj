@@ -49,6 +49,8 @@
                  new-list  (make-list list-name)
                  db-id     (str (gensym "l"))
                  url       (route/url-for :list-view :params {:list-id db-id})]
+             (println "url")
+             (println url)
              (assoc context
                :response (created new-list "Location" url)
                :tx-data [assoc db-id new-list])))})

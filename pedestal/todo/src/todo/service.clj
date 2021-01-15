@@ -9,26 +9,23 @@
    :leave (fn [ctx]
             (assoc-in ctx [:response :headers "Content-Security-Policy"] ""))})
 
-(def swagger-doc
-  {:info {:title       "Todo list API"
-          :description "Register and consult you todo list"
-          :version     "1.0"}
-   :tags [{:name        "Todo list"
-           :description "Register and consult you todo list"}]})
-
-(def routes
-  #{["/todo" :post [db-interceptor (api/doc {:tags ["create-list"]}) create-list]]
-    ["/todo" :get [db-interceptor (api/doc {:tags ["get-all-lists"]}) get-all-lists]]
-    ["/todo/:list-id" :get [entity-render db-interceptor (api/doc {:tags ["get-list"]}) get-list]]
-    ["/todo/:list-id" :post [entity-render list-item-view db-interceptor (api/doc {:tags ["create-list-item"]}) create-list-item]]
-    ["/todo/:list-id/:item-id" :get [entity-render list-item-view db-interceptor]]
-    ["/todo/:list-id/:item-id" :put echo :route-name :list-item-update]
-    ["/todo/:list-id/:item-id" :delete echo :route-name :list-item-delete]
-    ["/swagger.json" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) api/swagger-json]]
-    ["/*resource" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) no-csp api/swagger-ui]]})
-
 (s/with-fn-validation
-  (api/defroutes routes swagger-doc routes))
+  (api/defroutes
+    routes
+    {:info {:title       "Todo list API"
+            :description "Register and consult you todo list"
+            :version     "1.0"}
+     :tags [{:name        "Todo list"
+             :description "Register and consult you todo list"}]}
+    #{["/todo" :post [db-interceptor (api/doc {:tags ["create-list"]}) create-list]]
+      ["/todo" :get [db-interceptor (api/doc {:tags ["get-all-lists"]}) get-all-lists]]
+      ["/todo/:list-id" :get [entity-render db-interceptor (api/doc {:tags ["get-list"]}) get-list]]
+      ["/todo/:list-id" :post [entity-render list-item-view db-interceptor (api/doc {:tags ["create-list-item"]}) create-list-item]]
+      ["/todo/:list-id/:item-id" :get [entity-render list-item-view db-interceptor]]
+      ["/todo/:list-id/:item-id" :put echo :route-name :list-item-update]
+      ["/todo/:list-id/:item-id" :delete echo :route-name :list-item-delete]
+      ["/swagger.json" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) api/swagger-json]]
+      ["/*resource" :get [(api/negotiate-response) (api/body-params) api/common-body (api/coerce-request) (api/validate-response) no-csp api/swagger-ui]]}))
 
 (def service
   {:env                     :prod

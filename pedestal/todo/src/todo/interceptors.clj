@@ -61,7 +61,7 @@
 (def get-all-lists
   (sw.doc/annotate
     {:summary    "get-all-lists"
-     :parameters {:query-params {(s/required-key :name) s/Str}}
+     :parameters {}
      :responses  {200 {:body {(s/required-key :message) s/Str}}}}
     (io.pedestal.interceptor/interceptor
       {:name  :get-lists
